@@ -69,7 +69,7 @@ function setupSocket() {
         console.error("❌ Socket.io NOT LOADED!");
         return;
     }
-    const socket = io();
+    const socket = io(); // Connects automatically to the same host that served the HTML
     socket.on('connect', () => {
         console.log("✅ SOC LINK ESTABLISHED!");
         const dot = document.querySelector('.status-dot');
