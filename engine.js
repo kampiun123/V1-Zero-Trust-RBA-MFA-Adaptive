@@ -1,6 +1,6 @@
 /**
- * TRASHURE SOC ENGINE - v5.1 (STATIC GITHUB PAGES VERSION)
- * Enhanced with Diagnostics & Force-Refresh
+ * TRASHURE SOC ENGINE - v5.2 (BULLETPROOF STATIC VERSION)
+ * Designed for reliability on GitHub Pages.
  */
 
 let currentDept = null;
@@ -29,17 +29,28 @@ const USERNAMES = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🛠️ DOM Loaded. Initializing SOC...");
-    initClock();
-    initCharts();
-    initLocalStream();
-    console.log("✅ ZTNA SOC v5.1 (STATIC) READY.");
+    console.log("🛠️ Starting Bulletproof Initialization...");
+
+    // 1. Clock init
+    try { initClock(); } catch (e) { console.warn("Clock failed:", e); }
+
+    // 2. Charts init (The most common point of failure)
+    try { initCharts(); } catch (e) { console.warn("Charts failed (continuing without chart):", e); }
+
+    // 3. Data Stream (The most important part)
+    try { initLocalStream(); } catch (e) { console.error("CRITICAL: Stream failed!", e); }
+
+    console.log("✅ SOC v5.2 INITIALIZED.");
 });
 
 function initClock() {
     setInterval(() => {
         const fullClock = document.getElementById('socClock');
         if (fullClock) fullClock.innerText = new Date().toLocaleTimeString('id-ID');
+
+        // Also update phone time
+        const phoneTime = document.getElementById('phoneTime');
+        if (phoneTime) phoneTime.innerText = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 }
 
@@ -50,51 +61,56 @@ function getRiskLabel(score) {
 }
 
 function initLocalStream() {
-    console.log("📡 Starting Local ZTNA Stream...");
+    console.log("📡 Starting Live Simulation Engine...");
     const dot = document.querySelector('.status-dot');
     if (dot) dot.style.background = '#22c55e';
 
-    setInterval(() => {
-        try {
-            const user = USERNAMES[Math.floor(Math.random() * USERNAMES.length)];
-            const localSubnets = ["10.62.8", "10.62.30", "10.62.150"];
-            const anomalySubnets = ["172.16.10", "192.168.1", "103.11.24", "45.76.12"];
-            const isAnomaly = Math.random() < 0.3;
-            const subList = isAnomaly ? anomalySubnets : localSubnets;
-            const subnet = subList[Math.floor(Math.random() * subList.length)];
-            const ip = `${subnet}.${Math.floor(Math.random() * 254)}`;
-            const isLocal = ip.startsWith("10.62.");
+    // Immediate first pulse
+    generatePulse();
 
-            let baseScore = isLocal ? (5 + Math.random() * 25) : (50 + Math.random() * 45);
-            if (user.dept === "HR") baseScore -= 5;
+    // Start interval
+    setInterval(generatePulse, 3000);
+}
 
-            const score = Math.max(0, Math.min(100, baseScore)).toFixed(1);
-            const riskLabel = getRiskLabel(score);
+function generatePulse() {
+    try {
+        const user = USERNAMES[Math.floor(Math.random() * USERNAMES.length)];
+        const localSubnets = ["10.62.8", "10.62.30", "10.62.150"];
+        const anomalySubnets = ["172.16.10", "192.168.1", "103.11.24", "45.76.12"];
+        const isAnomaly = Math.random() < 0.3;
+        const subList = isAnomaly ? anomalySubnets : localSubnets;
+        const subnet = subList[Math.floor(Math.random() * subList.length)];
+        const ip = `${subnet}.${Math.floor(Math.random() * 254)}`;
+        const isLocal = ip.startsWith("10.62.");
 
-            const factors = {
-                geo: isLocal ? Math.max(2, Math.floor(Math.random() * 8)) : Math.max(45, Math.floor((score * 0.7) + Math.random() * 20)),
-                velocity: Math.max(4, Math.floor((score * 0.45) + Math.random() * 12)),
-                integrity: Math.min(100, Math.max(0, 100 - Math.floor((score * 0.75) + Math.random() * 8)))
-            };
+        let baseScore = isLocal ? (5 + Math.random() * 25) : (50 + Math.random() * 45);
+        if (user.dept === "HR") baseScore -= 5;
 
-            const data = {
-                user: user.name, role: user.role, dept: user.dept, ip: ip,
-                riskScore: score, riskLabel: riskLabel, factors: factors,
-                coords: { x: 20 + Math.random() * 60, y: 30 + Math.random() * 40 },
-                msg: isLocal ? `[TRUSTED_IDENTITY] Access via secure enterprise subnet 10.62.0.0.` : `[SUSPICIOUS_IP] External connection attempt from ${subnet}.0 subnet.`,
-                status: score > 70 ? 'DENIED' : (score > 35 ? 'MFA_REQUIRED' : 'VERIFIED'),
-                timestamp: new Date().toLocaleTimeString('id-ID')
-            };
+        const score = Math.max(0, Math.min(100, baseScore)).toFixed(1);
+        const riskLabel = getRiskLabel(score);
 
-            handleInboundData(data);
-        } catch (e) {
-            console.error("❌ Stream Loop Error:", e);
-        }
-    }, 3000);
+        const factors = {
+            geo: isLocal ? Math.max(2, Math.floor(Math.random() * 8)) : Math.max(45, Math.floor((score * 0.7) + Math.random() * 20)),
+            velocity: Math.max(4, Math.floor((score * 0.45) + Math.random() * 12)),
+            integrity: Math.min(100, Math.max(0, 100 - Math.floor((score * 0.75) + Math.random() * 8)))
+        };
+
+        const data = {
+            user: user.name, role: user.role, dept: user.dept, ip: ip,
+            riskScore: score, riskLabel: riskLabel, factors: factors,
+            coords: { x: 20 + Math.random() * 60, y: 30 + Math.random() * 40 },
+            msg: isLocal ? `[TRUSTED_IDENTITY] Access via secure enterprise subnet 10.62.0.0.` : `[SUSPICIOUS_IP] External connection attempt from ${subnet}.0 subnet.`,
+            status: score > 70 ? 'DENIED' : (score > 35 ? 'MFA_REQUIRED' : 'VERIFIED'),
+            timestamp: new Date().toLocaleTimeString('id-ID')
+        };
+
+        handleInboundData(data);
+    } catch (e) {
+        console.error("Pulse Generation Error:", e);
+    }
 }
 
 function handleInboundData(data) {
-    // console.log("📥 Data Pulse:", data.user, data.riskScore); // Noise reduction
     renderAuditLog(data);
     updateStats(data);
     const mon = document.getElementById('rawMonitor');
@@ -130,41 +146,54 @@ function renderAuditLog(data) {
 }
 
 function updateStats(data) {
-    const req = document.getElementById('reqTotal');
-    if (req) req.innerText = (parseInt(req.innerText) + 1).toLocaleString();
-    if (data.riskLabel === 'HIGH RISK') {
-        const th = document.getElementById('threatTotal');
-        if (th) th.innerText = (parseInt(th.innerText) + 1).toLocaleString();
-    }
-    const riskAvg = document.getElementById('riskAvg');
-    if (riskAvg && data.riskScore) riskAvg.innerText = data.riskScore + '%';
+    try {
+        const req = document.getElementById('reqTotal');
+        if (req) req.innerText = (parseInt(req.innerText.replace(/,/g, '')) + 1).toLocaleString();
 
-    if (data.factors) {
-        const updateElem = (id, val, isBar = false) => {
-            const el = document.getElementById(id);
-            if (el) {
-                if (isBar) el.style.width = val + '%';
-                else el.innerText = val + '%';
-            }
-        };
-        updateElem('valGeo', data.factors.geo);
-        updateElem('valVelocity', data.factors.velocity);
-        updateElem('valIntegrity', data.factors.integrity);
-        updateElem('barGeo', data.factors.geo, true);
-        updateElem('barVelocity', data.factors.velocity, true);
-        updateElem('barIntegrity', data.factors.integrity, true);
-    }
-    if (data.coords) renderMapPoint(data.coords);
-    if (trafficChart) {
-        trafficChart.data.datasets[0].data.shift();
-        trafficChart.data.datasets[0].data.push(Math.floor(Math.random() * 100));
-        trafficChart.update('none');
-    }
+        if (data.riskLabel === 'HIGH RISK') {
+            const th = document.getElementById('threatTotal');
+            if (th) th.innerText = (parseInt(th.innerText.replace(/,/g, '')) + 1).toLocaleString();
+        }
+
+        const riskAvg = document.getElementById('riskAvg');
+        if (riskAvg && data.riskScore) riskAvg.innerText = data.riskScore + '%';
+
+        if (data.factors) {
+            const updateElem = (id, val, isBar = false) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (isBar) el.style.width = val + '%';
+                    else el.innerText = val + '%';
+                }
+            };
+            updateElem('valGeo', data.factors.geo);
+            updateElem('valVelocity', data.factors.velocity);
+            updateElem('valIntegrity', data.factors.integrity);
+            updateElem('barGeo', data.factors.geo, true);
+            updateElem('barVelocity', data.factors.velocity, true);
+            updateElem('barIntegrity', data.factors.integrity, true);
+        }
+        if (data.coords) renderMapPoint(data.coords);
+
+        if (trafficChart && typeof trafficChart.update === 'function') {
+            trafficChart.data.datasets[0].data.shift();
+            trafficChart.data.datasets[0].data.push(Math.floor(Math.random() * 100));
+            trafficChart.update('none');
+        }
+    } catch (e) { console.error("Stats update failed:", e); }
 }
 
 function initCharts() {
     const ctx = document.getElementById('trafficChart')?.getContext('2d');
     if (!ctx) return;
+
+    // Check if Chart.js is actually loaded
+    if (typeof Chart === 'undefined') {
+        console.warn("Chart.js Not Found. Retrying in 2s...");
+        setTimeout(initCharts, 2000);
+        return;
+    }
+
     trafficChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -190,7 +219,6 @@ function initCharts() {
 function renderMapPoint(coords) {
     const map = document.getElementById('worldMap');
     if (!map) return;
-    if (map.children.length > 5) map.innerHTML = '';
     const point = document.createElement('div');
     point.className = 'map-point';
     point.style.left = coords.x + '%';
