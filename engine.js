@@ -1,6 +1,6 @@
 /**
- * TRASHURE SOC ENGINE - v5.2 (BULLETPROOF STATIC VERSION)
- * Designed for reliability on GitHub Pages.
+ * TRASHURE SOC ENGINE - v5.3 (ADAPTIVE MFA EDITION)
+ * Designed for reliability and deep RBA logic on GitHub Pages.
  */
 
 let currentDept = null;
@@ -105,6 +105,9 @@ function generatePulse() {
         };
 
         handleInboundData(data);
+        if (data.status === 'MFA_REQUIRED') {
+            triggerPhoneAuth(data.msg, data.riskScore);
+        }
     } catch (e) {
         console.error("Pulse Generation Error:", e);
     }
@@ -157,6 +160,21 @@ function updateStats(data) {
 
         const riskAvg = document.getElementById('riskAvg');
         if (riskAvg && data.riskScore) riskAvg.innerText = data.riskScore + '%';
+
+        // 📈 MFA Health Tracking (Simulated Stats)
+        if (!window.mfaStats) window.mfaStats = { success: 28, total: 30 };
+        if (data.msg.includes('MFA APPROVED')) {
+            window.mfaStats.success++;
+            window.mfaStats.total++;
+        } else if (data.msg.includes('MFA REJECTED')) {
+            window.mfaStats.total++;
+        }
+        const mfaHealth = document.getElementById('mfaHealth');
+        if (mfaHealth) {
+            const rate = ((window.mfaStats.success / window.mfaStats.total) * 100).toFixed(0);
+            mfaHealth.innerText = rate + '%';
+            mfaHealth.style.color = rate > 90 ? 'var(--accent-success)' : (rate > 70 ? 'var(--accent-warning)' : 'var(--accent-danger)');
+        }
 
         if (data.factors) {
             const updateElem = (id, val, isBar = false) => {
@@ -261,25 +279,55 @@ window.tryAccess = function (action) {
     };
     handleInboundData(data);
     if (status === 'PENDING_MFA') {
-        triggerPhoneAuth(`REQ: ${action} for ${data.user} [${data.riskLabel}]`);
+        triggerPhoneAuth(`REQ: ${action} for ${data.user} [${data.riskLabel}]`, data.riskScore);
     }
 }
 
-window.triggerPhoneAuth = function (msg) {
+window.triggerPhoneAuth = function (msg, score = 0) {
     const phoneIdle = document.getElementById('phoneIdle');
     const phoneAuth = document.getElementById('phoneAuth');
+    const phoneOTP = document.getElementById('phoneOTP');
+    const phoneBio = document.getElementById('phoneBio');
     const authMsg = document.getElementById('authMsg');
-    if (phoneIdle) phoneIdle.classList.add('hidden');
-    if (phoneAuth) phoneAuth.classList.remove('hidden');
-    if (authMsg) authMsg.innerText = msg;
+
+    // Hide all states first
+    [phoneIdle, phoneAuth, phoneOTP, phoneBio].forEach(el => el?.classList.add('hidden'));
+
+    console.log(`🛡️ TRIGGERING ADAPTIVE MFA: Score ${score}%`);
+
+    if (score > 75) {
+        // High Intensity: Biometric
+        if (phoneBio) phoneBio.classList.remove('hidden');
+    } else if (score > 55) {
+        // Med Intensity: OTP
+        if (phoneOTP) phoneOTP.classList.remove('hidden');
+    } else {
+        // Low Intensity: Push
+        if (phoneAuth) phoneAuth.classList.remove('hidden');
+        if (authMsg) authMsg.innerText = msg;
+    }
+}
+
+window.verifyOTP = function () {
+    const target = document.getElementById('otpTarget');
+    if (target && target.value === '7') {
+        phoneAction('APPROVE');
+    } else {
+        alert("INVALID OTP CODE! ACCESS DENIED.");
+        phoneAction('DENY');
+    }
 }
 
 window.phoneAction = function (type) {
     const phoneAuth = document.getElementById('phoneAuth');
+    const phoneOTP = document.getElementById('phoneOTP');
+    const phoneBio = document.getElementById('phoneBio');
     const phoneSuccess = document.getElementById('phoneSuccess');
+
     if (type === 'APPROVE') {
-        if (phoneAuth) phoneAuth.classList.add('hidden');
+        [phoneAuth, phoneOTP, phoneBio].forEach(el => el?.classList.add('hidden'));
         if (phoneSuccess) phoneSuccess.classList.remove('hidden');
+
         setTimeout(() => {
             if (phoneSuccess) phoneSuccess.classList.add('hidden');
             const phoneIdle = document.getElementById('phoneIdle');
@@ -292,13 +340,19 @@ window.phoneAction = function (type) {
         }, 1500);
     } else {
         const phoneIdle = document.getElementById('phoneIdle');
-        if (phoneAuth) phoneAuth.classList.add('hidden');
+        [phoneAuth, phoneOTP, phoneBio].forEach(el => el?.classList.add('hidden'));
         if (phoneIdle) phoneIdle.classList.remove('hidden');
+
+        handleInboundData({
+            user: "SYSTEM", role: "ZTNA", dept: "GATEWAY", riskScore: "95.0",
+            ip: "10.62.8.200", riskLabel: "CRITICAL", status: "DENIED",
+            msg: "MFA REJECTED OR TIMED OUT", timestamp: new Date().toLocaleTimeString('id-ID')
+        });
     }
 }
 
 window.triggerManualMFA = function (user, score) {
-    triggerPhoneAuth(`SOC CHALLENGE: Verify Identity for ${user} (Risk: ${score}%)`);
+    triggerPhoneAuth(`SOC CHALLENGE: Verify Identity for ${user} (Risk: ${score}%)`, score);
     renderAuditLog({
         user: "SOC_ADMIN", role: "Operator", dept: "CORE", riskScore: score,
         ip: "127.0.0.1", riskLabel: "MANUAL", status: "CHALLENGING",

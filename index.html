@@ -10,7 +10,7 @@
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <link rel="stylesheet" href="style.css?v=5.2">
+    <link rel="stylesheet" href="style.css?v=5.3">
 </head>
 
 <body>
@@ -120,13 +120,8 @@
                     <h2 class="stat-value" id="riskAvg">0.0%</h2>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-label">Proxmox CPU</span>
-                    <div class="progress-bg" style="margin-top: 10px;">
-                        <div id="hostCpu" class="progress-fill" style="width: 12%; background: var(--accent-success)">
-                        </div>
-                    </div>
-                    <span style="font-size: 0.5rem; color: var(--text-muted); margin-top: 4px; display: block;">Intel
-                        i7-6600U (Virtual Cluster)</span>
+                    <span class="stat-label">MFA Health Rate</span>
+                    <h2 class="stat-value" id="mfaHealth">100%</h2>
                 </div>
 
                 <!-- GRAPHS -->
@@ -264,6 +259,35 @@
                     </div>
                 </div>
 
+                <!-- NEW: OTP STATE -->
+                <div id="phoneOTP" class="phone-content hidden">
+                    <h4 style="font-size: 0.75rem; color: var(--accent-warning);">ENTER OTP CODE</h4>
+                    <p style="font-size: 0.45rem; color: #94a3b8; margin-bottom: 10px;">Sent to registered device</p>
+                    <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+                        <input type="text" maxlength="1" value="4" class="otp-input" disabled>
+                        <input type="text" maxlength="1" value="8" class="otp-input" disabled>
+                        <input type="text" maxlength="1" value="2" class="otp-input" disabled>
+                        <input type="text" maxlength="1" placeholder="?" class="otp-input" id="otpTarget"
+                            style="border-color: var(--accent-primary); background: rgba(56,189,248,0.1);">
+                    </div>
+                    <button class="mfa-btn"
+                        style="width: 80%; padding: 8px; font-size: 0.6rem; background: var(--accent-primary)"
+                        onclick="verifyOTP()">VERIFY OTP</button>
+                </div>
+
+                <!-- NEW: BIOMETRIC STATE -->
+                <div id="phoneBio" class="phone-content hidden">
+                    <div class="bio-scanner">
+                        <ion-icon name="finger-print" style="font-size: 3rem; color: var(--accent-success);"></ion-icon>
+                        <div class="scan-bar"></div>
+                    </div>
+                    <h4 style="font-size: 0.7rem; margin-top: 15px;">SCANNING BIOMETRIC...</h4>
+                    <p style="font-size: 0.45rem; color: #94a3b8;">Place finger on sensor</p>
+                    <button class="mfa-btn"
+                        style="width: 80%; padding: 8px; font-size: 0.6rem; background: var(--accent-success); margin-top: 15px;"
+                        onclick="phoneAction('APPROVE')">SIMULATE SCAN</button>
+                </div>
+
                 <div id="phoneSuccess" class="phone-content hidden">
                     <ion-icon name="checkmark-circle-outline"
                         style="font-size: 3rem; color: var(--accent-success)"></ion-icon>
@@ -274,7 +298,7 @@
     </div>
 
     <!-- Static Engine (No Backend Needed) -->
-    <script src="engine.js?v=5.2"></script>
+    <script src="engine.js?v=5.3"></script>
 </body>
 
 </html>
