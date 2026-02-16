@@ -1,16 +1,38 @@
 /**
- * TRASHURE SOC ENGINE - v4.5 (STABLE & INTERACTIVE)
+ * TRASHURE SOC ENGINE - v5.0 (STATIC GITHUB PAGES VERSION)
+ * Ported by Antigravity - Real ZTNA logic in a standalone JS file.
  */
 
 let currentDept = null;
 let currentIP = null;
 let trafficChart = null;
 
+const USERNAMES = [
+    { name: "Rina S.", role: "Staff", dept: "Logistics" },
+    { name: "Bambang W.", role: "Manager", dept: "Production" },
+    { name: "Siti A.", role: "Staff", dept: "Warehouse" },
+    { name: "John Doe", role: "Expert Advisor", dept: "R&D" },
+    { name: "Yuki Tanaka", role: "System Engineer", dept: "Engineering" },
+    { name: "Agus Pratama", role: "Head of Finance", dept: "Finance" },
+    { name: "Sari Dewi", role: "HR Specialist", dept: "HR" },
+    { name: "Budi Santoso", role: "Security Officer", dept: "Core" },
+    { name: "Mega Putri", role: "Logistics Admin", dept: "Logistics" },
+    { name: "Andi Wijaya", role: "Foreman", dept: "Production" },
+    { name: "Sarah Connor", role: "IT Infrastructure", dept: "Engineering" },
+    { name: "Michael V.", role: "Operations Mgr", dept: "Warehouse" },
+    { name: "Linda Kusuma", role: "Quality Control", dept: "Production" },
+    { name: "Hendra Setiawan", role: "Legal Counsel", dept: "HR" },
+    { name: "Fanya Utami", role: "Marketing Lead", dept: "R&D" },
+    { name: "Kevin Hart", role: "External Consultant", dept: "Engineering" },
+    { name: "Dewi Sartika", role: "Admin Staff", dept: "Logistics" },
+    { name: "Eko Prasetyo", role: "Plant Manager", dept: "Production" }
+];
+
 document.addEventListener('DOMContentLoaded', () => {
     initClock();
     initCharts();
-    setupSocket();
-    console.log("🚀 ZTNA SOC v4.5 READY.");
+    initLocalStream(); // Replacing setupSocket for GitHub Pages
+    console.log("🚀 ZTNA SOC v5.0 (STATIC) READY.");
 });
 
 function initClock() {
@@ -20,67 +42,61 @@ function initClock() {
     }, 1000);
 }
 
-// 🛡️ ZTNA & GPO Logic (Thesis Alignment)
-window.showPolicyModal = () => document.getElementById('policyModal').classList.remove('hidden');
-window.hidePolicyModal = () => document.getElementById('policyModal').classList.add('hidden');
-
-window.trySystemSettings = () => {
-    if (!currentDept) return alert("Pilih Unit Department Dulu Bang!");
-
-    // Simulate GPO Check
-    const data = {
-        user: "SYS_LOCAL", role: "User", dept: currentDept,
-        ip: "127.0.0.1", riskLabel: "CRITICAL", status: "GPO_BLOCK",
-        msg: `[GPO_VIOLATION] Access to System Settings Blocked by trashure.local Policy.`,
-        timestamp: new Date().toLocaleTimeString('id-ID')
-    };
-    renderAuditLog(data);
-    updateStats(data);
-};
-
-function initCharts() {
-    const ctx = document.getElementById('trafficChart')?.getContext('2d');
-    if (!ctx) return;
-    trafficChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['-3h', '-2h', '-1h', 'Now'],
-            datasets: [{
-                label: 'Traffic Pulse',
-                data: [30, 45, 25, 60],
-                borderColor: '#38bdf8',
-                backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { display: false }, x: { grid: { display: false }, ticks: { color: '#64748b' } } }
-        }
-    });
+function getRiskLabel(score) {
+    if (score > 70) return "HIGH RISK";
+    if (score > 35) return "MED RISK";
+    return "LOW RISK";
 }
 
-function setupSocket() {
-    console.log("🔗 Connecting to ZTNA Stream...");
-    if (typeof io === 'undefined') {
-        console.error("❌ Socket.io NOT LOADED!");
-        return;
-    }
-    const socket = io(); // Connects automatically to the same host that served the HTML
-    socket.on('connect', () => {
-        console.log("✅ SOC LINK ESTABLISHED!");
-        const dot = document.querySelector('.status-dot');
-        if (dot) dot.style.background = '#22c55e';
-    });
-    socket.on('ztna-log', (data) => {
-        renderAuditLog(data);
-        updateStats(data);
-        const mon = document.getElementById('rawMonitor');
-        if (mon) mon.innerText = JSON.stringify(data, null, 2);
-    });
+// 🛡️ Data Stream Simulation (Ported from server.js)
+function initLocalStream() {
+    console.log("📡 Starting Local ZTNA Stream (Standalone Mode)...");
+    const dot = document.querySelector('.status-dot');
+    if (dot) dot.style.background = '#22c55e'; // Green dot for local simulation
+
+    setInterval(() => {
+        const user = USERNAMES[Math.floor(Math.random() * USERNAMES.length)];
+
+        // SUBNET DEFINITION (10.62.x.x is TRUSTED)
+        const localSubnets = ["10.62.8", "10.62.30", "10.62.150"];
+        const anomalySubnets = ["172.16.10", "192.168.1", "103.11.24", "45.76.12"];
+
+        const isAnomaly = Math.random() < 0.3;
+        const subList = isAnomaly ? anomalySubnets : localSubnets;
+        const subnet = subList[Math.floor(Math.random() * subList.length)];
+        const ip = `${subnet}.${Math.floor(Math.random() * 254)}`;
+        const isLocal = ip.startsWith("10.62.");
+
+        let baseScore = isLocal ? (5 + Math.random() * 25) : (50 + Math.random() * 45);
+        if (user.dept === "HR") baseScore -= 5;
+
+        const score = Math.max(0, Math.min(100, baseScore)).toFixed(1);
+        const riskLabel = getRiskLabel(score);
+
+        const factors = {
+            geo: isLocal ? Math.max(2, Math.floor(Math.random() * 8)) : Math.max(45, Math.floor((score * 0.7) + Math.random() * 20)),
+            velocity: Math.max(4, Math.floor((score * 0.45) + Math.random() * 12)),
+            integrity: Math.min(100, Math.max(0, 100 - Math.floor((score * 0.75) + Math.random() * 8)))
+        };
+
+        const data = {
+            user: user.name, role: user.role, dept: user.dept, ip: ip,
+            riskScore: score, riskLabel: riskLabel, factors: factors,
+            coords: { x: 20 + Math.random() * 60, y: 30 + Math.random() * 40 },
+            msg: isLocal ? `[TRUSTED_IDENTITY] Access via secure enterprise subnet 10.62.0.0.` : `[SUSPICIOUS_IP] External connection attempt from ${subnet}.0 subnet.`,
+            status: score > 70 ? 'DENIED' : (score > 35 ? 'MFA_REQUIRED' : 'VERIFIED'),
+            timestamp: new Date().toLocaleTimeString('id-ID')
+        };
+
+        handleInboundData(data);
+    }, 3000);
+}
+
+function handleInboundData(data) {
+    renderAuditLog(data);
+    updateStats(data);
+    const mon = document.getElementById('rawMonitor');
+    if (mon) mon.innerText = JSON.stringify(data, null, 2);
 }
 
 function renderAuditLog(data) {
@@ -112,23 +128,16 @@ function renderAuditLog(data) {
 }
 
 function updateStats(data) {
-    console.log("📊 STATS UPDATE RECEIVED:", data.user, data.riskScore, data.factors);
-
     const req = document.getElementById('reqTotal');
     if (req) req.innerText = (parseInt(req.innerText) + 1).toLocaleString();
-
     if (data.riskLabel === 'HIGH RISK') {
         const th = document.getElementById('threatTotal');
         if (th) th.innerText = (parseInt(th.innerText) + 1).toLocaleString();
     }
-
     const riskAvg = document.getElementById('riskAvg');
     if (riskAvg && data.riskScore) riskAvg.innerText = data.riskScore + '%';
 
-    // 📊 Update RBA Factors
     if (data.factors) {
-        console.log("⚡ UPDATING RBA PANEL:", data.factors);
-
         const updateElem = (id, val, isBar = false) => {
             const el = document.getElementById(id);
             if (el) {
@@ -136,20 +145,14 @@ function updateStats(data) {
                 else el.innerText = val + '%';
             }
         };
-
         updateElem('valGeo', data.factors.geo);
         updateElem('valVelocity', data.factors.velocity);
         updateElem('valIntegrity', data.factors.integrity);
-
         updateElem('barGeo', data.factors.geo, true);
         updateElem('barVelocity', data.factors.velocity, true);
         updateElem('barIntegrity', data.factors.integrity, true);
     }
-
-    // 🌍 Update Map Point
     if (data.coords) renderMapPoint(data.coords);
-
-    // Update chart randomly
     if (trafficChart) {
         trafficChart.data.datasets[0].data.shift();
         trafficChart.data.datasets[0].data.push(Math.floor(Math.random() * 100));
@@ -184,13 +187,32 @@ window.selectDept = function (name, ip) {
 
 window.tryAccess = function (action) {
     if (!currentDept) return alert("Pilih Unit Dulu Bang!");
-    const target = currentDept.toLowerCase().includes('r&d') ? 'rd' : currentDept.toLowerCase();
-    fetch(`/simulate/${target}?action=${action}`).then(res => res.json()).then(res => {
-        const data = res.data;
-        if (data && data.status === 'PENDING_MFA') {
-            triggerPhoneAuth(`REQ: ${action} for ${data.user} [${data.riskLabel}]`);
-        }
-    });
+
+    // SIMULATED ENDPOINT LOGIC
+    const user = USERNAMES.find(u => u.dept.toLowerCase().includes(currentDept.toLowerCase())) || USERNAMES[0];
+    let score = (action === 'READ') ? 15 : 45;
+    let msg = `[GPO_CHECK] User ${user.name} allowed ${action} access to Dept Folder.`;
+    let status = (score > 35) ? 'PENDING_MFA' : 'VERIFIED';
+
+    if (action === 'WRITE' && user.dept !== 'HR') {
+        score = 82.5;
+        msg = `[ZTNA_BLOCK] GPO Policy violation: ${user.name} (${user.dept}) has no WRITE permission.`;
+        status = 'DENIED';
+    }
+
+    const data = {
+        user: user.name, role: user.role, dept: user.dept,
+        ip: `10.62.8.${Math.floor(Math.random() * 254)}`,
+        riskScore: score, riskLabel: getRiskLabel(score),
+        factors: { geo: 5, velocity: 5, integrity: 95 },
+        msg: msg, status: status, coords: { x: 50, y: 50 },
+        timestamp: new Date().toLocaleTimeString('id-ID')
+    };
+
+    handleInboundData(data);
+    if (status === 'PENDING_MFA') {
+        triggerPhoneAuth(`REQ: ${action} for ${data.user} [${data.riskLabel}]`);
+    }
 }
 
 window.triggerPhoneAuth = function (msg) {
@@ -212,8 +234,8 @@ window.phoneAction = function (type) {
             if (phoneSuccess) phoneSuccess.classList.add('hidden');
             const phoneIdle = document.getElementById('phoneIdle');
             if (phoneIdle) phoneIdle.classList.remove('hidden');
-            renderAuditLog({
-                user: "SYSTEM", role: "ZTNA", dept: "GATEWAY",
+            handleInboundData({
+                user: "SYSTEM", role: "ZTNA", dept: "GATEWAY", riskScore: "5.0",
                 ip: "10.62.8.200", riskLabel: "LOW RISK", status: "VERIFIED",
                 msg: "MFA APPROVED BY DEVICE", timestamp: new Date().toLocaleTimeString('id-ID')
             });
@@ -228,31 +250,30 @@ window.phoneAction = function (type) {
 window.triggerManualMFA = function (user, score) {
     triggerPhoneAuth(`SOC CHALLENGE: Verify Identity for ${user} (Risk: ${score}%)`);
     renderAuditLog({
-        user: "SOC_ADMIN", role: "Operator", dept: "CORE",
-        ip: "127.0.0.1", riskLabel: "MANUAL", riskScore: score, status: "CHALLENGING",
+        user: "SOC_ADMIN", role: "Operator", dept: "CORE", riskScore: score,
+        ip: "127.0.0.1", riskLabel: "MANUAL", status: "CHALLENGING",
         msg: `SOC-Triggered MFA Challenge sent to ${user}.`,
         timestamp: new Date().toLocaleTimeString('id-ID')
     });
 }
 
 window.manualBlock = function (ip) {
-    fetch('/soc/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'BLOCK', ip: ip })
+    handleInboundData({
+        user: "SOC_SYSTEM", role: "Operator", dept: "CORE", riskScore: "100",
+        ip: "127.0.0.1", riskLabel: "NONE", status: "INTERVENED",
+        msg: `MANUAL BLOCK APPLIED TO ${ip}`,
+        timestamp: new Date().toLocaleTimeString('id-ID')
     });
 }
 
-window.hideMFA = function () {
-    const overlay = document.getElementById('mfaOverlay');
-    if (overlay) overlay.classList.add('hidden');
-}
-
-window.verifyMFA = function () {
-    hideMFA();
-    renderAuditLog({
-        user: "SYSTEM", role: "SOC", dept: "CORE",
-        ip: "127.0.0.1", riskLabel: "NONE", status: "VERIFIED",
-        msg: "MFA Token Accepted", timestamp: new Date().toLocaleTimeString('id-ID')
+window.showPolicyModal = () => document.getElementById('policyModal').classList.remove('hidden');
+window.hidePolicyModal = () => document.getElementById('policyModal').classList.add('hidden');
+window.trySystemSettings = () => {
+    if (!currentDept) return alert("Pilih Unit Department Dulu Bang!");
+    handleInboundData({
+        user: "SYS_LOCAL", role: "User", dept: currentDept, riskScore: "95.0",
+        ip: "127.0.0.1", riskLabel: "CRITICAL", status: "GPO_BLOCK",
+        msg: `[GPO_VIOLATION] Access to System Settings Blocked by trashure.local Policy.`,
+        timestamp: new Date().toLocaleTimeString('id-ID')
     });
-}
+};
