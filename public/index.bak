@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SULTAN ZTNA COMMAND CENTER</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Roboto+Condensed:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="glitch-overlay"></div>
+
+    <header class="zt-header">
+        <div class="header-left">
+            <div class="zt-logo">🛡️</div>
+            <div class="zt-title">
+                <h1>SULTAN ZTNA ELITE</h1>
+                <p>RISK-BASED AUTH & ADAPTIVE MFA V1.0</p>
+            </div>
+        </div>
+        <div class="header-center">
+            <div class="system-status">
+                <div class="dot pulse-green"></div>
+                <span>SYSTEM ONLINE</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div id="clock">00:00:00</div>
+            <div class="geo-tag">JAKARTA SERVER [7.21°S 106.84°E]</div>
+        </div>
+    </header>
+
+    <main class="zt-grid">
+        <!-- LEFT: ACCESS MONITOR -->
+        <section class="zt-col col-left">
+            <div class="zt-box monitor-box">
+                <div class="box-label">LIVE ACCESS MONITOR</div>
+                <div id="accessMonitor" class="log-stream">
+                    <!-- Logs will be prepended here -->
+                </div>
+            </div>
+
+            <div class="zt-box stats-box">
+                <div class="box-label">NETWORK STATS</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <label>ACTIVE SESSIONS</label>
+                        <span id="activeSessions">42</span>
+                    </div>
+                    <div class="stat-item">
+                        <label>RISK ALERTS</label>
+                        <span id="riskAlerts" class="text-red">03</span>
+                    </div>
+                    <div class="stat-item">
+                        <label>BLOCKED ATTEMPTS</label>
+                        <span id="blockedAttempts">128</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CENTER: POLICY ENGINE VISUALIZER -->
+        <section class="zt-col col-center">
+            <div class="zt-box engine-box">
+                <div class="box-label">RISK ANALYSIS ENGINE</div>
+                <div class="engine-viz">
+                    <canvas id="riskGauge"></canvas>
+                    <div class="risk-score-display">
+                        <span id="riskScore">0</span>
+                        <label>RISK INDEX</label>
+                    </div>
+                </div>
+                <div id="analysisDetails" class="analysis-details">
+                    <div class="detail-row">
+                        <span>IDENTITY VERIFICATION</span>
+                        <span class="status st-ok">PASSED</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>GEO-LOCATION RISK</span>
+                        <span class="status st-ok">LOW</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>DEVICE INTEGRITY</span>
+                        <span class="status st-warn">PENDING</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="zt-box control-box">
+                <div class="box-label">SIMULATION CONTROL</div>
+                <div class="control-btns">
+                    <button class="zt-btn btn-green" onclick="simulateAccess('trusted')">SIMULATE TRUSTED
+                        ACCESS</button>
+                    <button class="zt-btn btn-yellow" onclick="simulateAccess('suspicious')">SIMULATE
+                        SUSPICIOUS</button>
+                    <button class="zt-btn btn-red" onclick="simulateAccess('threat')">SIMULATE THREAT</button>
+                    <button class="zt-btn" style="background:rgba(255,0,0,0.5); border:1px solid #fff; color:#fff"
+                        onclick="simulateAccess('brute')">SIMULATE BRUTE-FORCE</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT: ADAPTIVE MFA CHALLENGE -->
+        <section class="zt-col col-right">
+            <div id="mfaBox" class="zt-box mfa-box locked">
+                <div class="box-label">ADAPTIVE MFA CHALLENGE</div>
+                <div id="mfaUI" class="mfa-ui">
+                    <div class="mfa-idle">
+                        <ion-icon name="lock-closed-outline"></ion-icon>
+                        <p>AWAITING REQUEST</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="zt-box trust-box">
+                <div class="box-label">DEVICE REPUTATION SCORE</div>
+                <div id="trustMatrix" class="trust-grid">
+                    <div class="trust-item"><label>OS VER</label><span>VERIFIED</span></div>
+                    <div class="trust-item"><label>PATCH</label><span>LATEST</span></div>
+                    <div class="trust-item"><label>ROOT</label><span>NONE</span></div>
+                    <div class="trust-item"><label>AV</label><span>ACTIVE</span></div>
+                </div>
+            </div>
+
+            <div class="zt-box map-box">
+                <div class="box-label">THREAT MATRIX FEED</div>
+                <div class="matrix-container" id="matrixFeed">
+                    <!-- Matrix rain / digital particles here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="zt-footer">
+        <div class="ticker-label">SECURITY FEED:</div>
+        <div class="ticker-wrap">
+            <div id="securityTicker" class="ticker-content">
+                ... ZERO TRUST ENFORCEMENT ACTIVE ... MONITORING ALL PORT 80/443 TRAFFIC ... ANOMALY DETECTION ARMED ...
+            </div>
+        </div>
+    </footer>
+
+    <!-- ADAPTIVE LOGIN MODAL -->
+    <div id="loginOverlay" class="modal-overlay hidden">
+        <div class="login-modal">
+            <div class="modal-glow"></div>
+            <div class="login-header">
+                <ion-icon name="shield-checkmark"></ion-icon>
+                <h2>SULTAN AUTHENTICATOR</h2>
+            </div>
+
+            <div id="loginStep1" class="login-step">
+                <div class="input-group">
+                    <label>IDENTITY HANDLE</label>
+                    <input type="text" id="usernameInput" placeholder="Enter Username..." autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>ACCESS KEY</label>
+                    <input type="password" id="passwordInput" placeholder="••••••••">
+                </div>
+                <button class="zt-btn btn-cyan" onclick="proceedToChallenge()">INITIATE SECURE ACCESS</button>
+            </div>
+
+            <div id="loginStep2" class="login-step hidden">
+                <div id="challengeContent">
+                    <!-- MFA Challenges go here -->
+                </div>
+            </div>
+
+            <div id="loginStepSuccess" class="login-step hidden">
+                <div class="success-anim">
+                    <ion-icon name="checkmark-done-circle" class="text-green"></ion-icon>
+                    <h3 class="text-green">ACCESS GRANTED</h3>
+                    <p>Redirecting to Secure Gateway...</p>
+                </div>
+            </div>
+
+            <div class="login-footer">
+                <span class="secure-tag">ENCRYPTED END-TO-END</span>
+                <button class="text-btn" onclick="closeLogin()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="engine.js"></script>
+</body>
+
+</html>

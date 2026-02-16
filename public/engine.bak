@@ -1,0 +1,413 @@
+// ============================================
+// SULTAN ZTNA ENGINE V1.0 - CORE LOGIC
+// ============================================
+
+let riskScore = 0;
+let blockedCount = 128;
+let monitorLogs = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    initClock();
+    initGauge();
+    initMatrix(); // Initialize matrix rain
+
+    // SOCKET.IO REAL-TIME LOGS
+    const socket = io();
+    socket.on('ztna-log', (data) => {
+        addLog(data.type, data.ip, data.msg);
+
+        // Update Risk Gauge based on real traffic risk
+        if (data.msg.includes('Score')) {
+            const scoreMatch = data.msg.match(/Score (\d+)/);
+            if (scoreMatch) animateRiskScore(parseInt(scoreMatch[1]));
+        }
+    });
+
+    addLog('SYSTEM', 'CORE', 'SULTAN ZTNA ENGINE CONNECTED.');
+});
+
+// ============================================
+// CLOCK
+// ============================================
+function initClock() {
+    setInterval(() => {
+        const now = new Date();
+        document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+    }, 1000);
+}
+
+// ============================================
+// RISK GAUGE (CANVAS)
+// ============================================
+function initGauge() {
+    const canvas = document.getElementById('riskGauge');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 300;
+    canvas.height = 150;
+
+    function draw() {
+        ctx.clearRect(0, 0, 300, 150);
+
+        // Background Arc
+        ctx.beginPath();
+        ctx.arc(150, 140, 120, Math.PI, 0);
+        ctx.strokeStyle = 'rgba(30, 41, 59, 1)';
+        ctx.lineWidth = 20;
+        ctx.stroke();
+
+        // Active Risk Arc
+        const scoreNorm = riskScore / 100;
+        const color = riskScore < 35 ? '#22c55e' : (riskScore < 65 ? '#eab308' : '#ef4444');
+
+        ctx.beginPath();
+        ctx.arc(150, 140, 120, Math.PI, Math.PI + (Math.PI * scoreNorm));
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 20;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = color;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        document.getElementById('riskScore').innerText = Math.round(riskScore);
+        document.getElementById('riskScore').style.color = color;
+
+        requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+// ============================================
+// SIMULATION ENGINE
+// ============================================
+// ============================================
+// RISK CALCULATION REFINEMENT
+// ============================================
+function calculateBaseRisk(type) {
+    let factors = {
+        identity: 0,
+        location: 0,
+        device: 0,
+        time: 0
+    };
+
+    const currentHour = new Date().getHours();
+    const isWorkingHours = currentHour >= 8 && currentHour <= 17;
+
+    if (type === 'trusted') {
+        factors.identity = 5;
+        factors.location = 5;
+        factors.device = 5;
+        factors.time = isWorkingHours ? 2 : 15; // Higher risk if working late
+    } else if (type === 'suspicious') {
+        factors.identity = 30;
+        factors.location = 40; // Unusual IP
+        factors.device = 10;
+        factors.time = isWorkingHours ? 10 : 25;
+    } else {
+        factors.identity = 70; // Failed ID
+        factors.location = 80; // Proxy/VPN detected
+        factors.device = 90;   // Rooted/Jailbroken
+        factors.time = 50;
+    }
+
+    const total = (factors.identity + factors.location + factors.device + factors.time) / 4;
+    return { score: total, factors };
+}
+
+function simulateAccess(type) {
+    const analysis = calculateBaseRisk(type);
+    let label = '';
+    let ip = '';
+    let mfaType = 'NONE';
+
+    if (type === 'brute') {
+        label = 'SYSTEM_ATTACKER_BOT';
+        ip = '172.16.0.5';
+        mfaType = 'DENIED';
+    } else if (type === 'trusted') {
+        label = 'KUKUH (CEO/ADMIN)';
+        ip = '192.168.1.45';
+        mfaType = analysis.score > 20 ? 'OTP_PUSH' : 'KEYCARD';
+    } else if (type === 'suspicious') {
+        label = 'EXTERNAL_VENDOR_99';
+        ip = '203.14.88.21';
+        mfaType = 'OTP_PUSH';
+    } else {
+        label = 'MALICIOUS_BOT_X';
+        ip = '104.22.7.192';
+        mfaType = 'BIOMETRIC';
+    }
+
+    animateRiskScore(analysis.score);
+    addLog('AUTH_ATTEMPT', ip, `Identity ${label} evaluating risk...`);
+
+    // UI Feedback for High Risk
+    if (analysis.score > 70) {
+        document.body.classList.add('emergency-mode');
+        addLog('CRITICAL', ip, `HIGH RISK DETECTED! ${type === 'brute' ? 'Account Locked' : 'Lockdown initiated'}.`);
+        if (type === 'brute') {
+            blockedCount++;
+            document.getElementById('blockedAttempts').innerText = blockedCount;
+        }
+    } else {
+        document.body.classList.remove('emergency-mode');
+    }
+
+    if (type === 'brute') {
+        document.getElementById('mfaUI').innerHTML = `<h3 style="color:var(--accent-red)">ACCOUNT LOCKED</h3><p>Too many failed attempts. Identity Suspended.</p>`;
+        return;
+    }
+    updateDetails(type, analysis.factors);
+    showMFA(mfaType, type);
+}
+
+function animateRiskScore(target) {
+    const start = riskScore;
+    const duration = 1000;
+    const startTime = performance.now();
+
+    function step(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        riskScore = start + (target - start) * progress;
+
+        if (progress < 1) {
+            requestAnimationFrame(step);
+        } else {
+            riskScore = target;
+        }
+    }
+    requestAnimationFrame(step);
+}
+
+function addLog(type, ip, msg) {
+    const container = document.getElementById('accessMonitor');
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    const div = document.createElement('div');
+    div.className = `log-entry ${type.toLowerCase()}`;
+    div.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-type">[${type}]</span> <span class="log-ip">${ip}</span> <span class="log-msg">${msg}</span>`;
+    container.prepend(div);
+
+    if (container.children.length > 50) container.removeChild(container.lastChild);
+}
+
+function updateDetails(type, factors) {
+    const details = document.getElementById('analysisDetails');
+    const getStatus = (val) => val < 20 ? 'st-ok' : (val < 60 ? 'st-warn' : 'st-err');
+    const getLabel = (val) => val < 20 ? 'SECURE' : (val < 60 ? 'UNUSUAL' : 'MALICIOUS');
+
+    details.innerHTML = `
+        <div class="detail-row"><span>ID: ${type.toUpperCase()}</span><span class="status ${getStatus(factors.identity)}">${getLabel(factors.identity)}</span></div>
+        <div class="detail-row"><span>GEO: ${factors.location}%</span><span class="status ${getStatus(factors.location)}">${factors.location < 20 ? 'LOCAL' : 'REMOTE'}</span></div>
+        <div class="detail-row"><span>DEV: REPUTATION</span><span class="status ${getStatus(factors.device)}">${factors.device < 20 ? 'TRUSTED' : 'UNKNOWN'}</span></div>
+        <div class="detail-row"><span>TIME: ATTEMPT</span><span class="status ${getStatus(factors.time)}">${factors.time < 20 ? 'OFFICE' : 'AFTERHOURS'}</span></div>
+    `;
+}
+
+function showMFA(type, severity) {
+    const mfaBox = document.getElementById('mfaBox');
+    const mfaUI = document.getElementById('mfaUI');
+
+    mfaBox.classList.remove('locked');
+
+    if (severity === 'threat') {
+        mfaUI.innerHTML = `
+            <div class="mfa-active-ui" style="color:var(--accent-red)">
+                <ion-icon name="alert-circle-outline" style="font-size:3rem;"></ion-icon>
+                <h3 class="mfa-type-label" style="color:var(--accent-red)">ACCESS DENIED</h3>
+                <p>Anomali terdeteksi. Akses dari IP ini diblokir sementara.</p>
+                <button class="zt-btn btn-red" onclick="resetMFA()" style="margin-top:20px;">ACKNOWLEDGE</button>
+            </div>
+        `;
+        blockedCount++;
+        document.getElementById('blockedAttempts').innerText = blockedCount;
+        return;
+    }
+
+    let challenge = '';
+    if (type === 'KEYCARD') challenge = 'SWIPE KEYCARD';
+    if (type === 'OTP_PUSH') challenge = 'ENTER OTP CODE (6-DIGIT)';
+
+    mfaUI.innerHTML = `
+        <div class="mfa-active-ui">
+            <h3 class="mfa-type-label">ADAPTIVE CHALLENGE: ${type}</h3>
+            <p style="font-size:0.7rem; margin-bottom:15px; color:var(--text-muted)">Security escalation due to moderate risk.</p>
+            <input type="text" class="mfa-input" placeholder="${challenge}" maxlength="6">
+            <button class="zt-btn btn-green" onclick="resetMFA()">VERIFY IDENTITY</button>
+        </div>
+    `;
+}
+
+function resetMFA() {
+    const mfaBox = document.getElementById('mfaBox');
+    const mfaUI = document.getElementById('mfaUI');
+
+    mfaBox.classList.add('locked');
+    mfaUI.innerHTML = `
+        <div class="mfa-idle">
+            <ion-icon name="lock-closed-outline"></ion-icon>
+            <p>AWAITING REQUEST</p>
+        </div>
+    `;
+    animateRiskScore(0);
+}
+// ============================================
+// MATRIX RAIN ANIMATION
+// ============================================
+function initMatrix() {
+    const container = document.getElementById('matrixFeed');
+    const columnCount = Math.floor(container.offsetWidth / 15);
+
+    for (let i = 0; i < columnCount; i++) {
+        createColumn(i * 15);
+    }
+
+    function createColumn(x) {
+        const char = document.createElement('div');
+        char.className = 'matrix-char';
+        char.style.left = x + 'px';
+        char.style.top = '-' + (Math.random() * 100) + 'px';
+        char.innerText = String.fromCharCode(0x30A0 + Math.random() * 96);
+        container.appendChild(char);
+
+        animateChar(char);
+    }
+
+    function animateChar(el) {
+        let top = parseInt(el.style.top);
+        const speed = 2 + Math.random() * 5;
+
+        function move() {
+            top += speed;
+            el.style.top = top + 'px';
+
+            if (top > container.offsetHeight) {
+                top = -20;
+                el.innerText = String.fromCharCode(0x30A0 + Math.random() * 96);
+            }
+            requestAnimationFrame(move);
+        }
+        move();
+    }
+}
+
+// ============================================
+// ENHANCED SIMULATION LOGIC
+// ============================================
+// Re-initializing Matrix on load
+document.addEventListener('DOMContentLoaded', () => {
+    initMatrix();
+});
+
+function calculateAdvancedRisk(type) {
+    let base = calculateBaseRisk(type);
+
+    // Add "Random Anomaly" Factor
+    if (Math.random() > 0.8) {
+        base.score += 15;
+        addLog('ANOMALY', '0.0.0.0', 'UAV (Unusual Activity Violation) detected in stream.');
+    }
+
+    return base;
+}
+
+// Updating simulateAccess to use advanced risk
+const originalSimulateAccess = simulateAccess;
+simulateAccess = function (type) {
+    const analysis = calculateAdvancedRisk(type);
+    // Continue with existing logic but injected with more logs
+    addLog('SEC_SCAN', 'LOCAL', 'Heuristic analysis in progress...');
+
+    setTimeout(() => {
+        originalSimulateAccess(type);
+    }, 400);
+}
+// ============================================
+// ADAPTIVE LOGIN MODAL LOGIC
+// ============================================
+let currentSimulationType = 'trusted';
+
+function openLogin(type) {
+    currentSimulationType = type;
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    showStep(1);
+
+    // Preliminary risk calculation for the background
+    const analysis = calculateAdvancedRisk(type);
+    animateRiskScore(analysis.score);
+
+    if (analysis.score > 70) {
+        document.body.classList.add('emergency-mode');
+    } else {
+        document.body.classList.remove('emergency-mode');
+    }
+}
+
+function showStep(n) {
+    document.querySelectorAll('.login-step').forEach(s => s.classList.add('hidden'));
+    const stepEl = document.getElementById('loginStep' + (n === 1 ? '1' : (n === 2 ? '2' : 'Success')));
+    if (stepEl) stepEl.classList.remove('hidden');
+}
+
+function proceedToChallenge() {
+    const userInput = document.getElementById('usernameInput');
+    const user = userInput.value || 'KUKUH';
+    addLog('AUTH', 'LOCAL', `Initiating access request for ${user}...`);
+
+    setTimeout(() => {
+        const assessment = calculateAdvancedRisk(currentSimulationType);
+        const score = assessment.score;
+
+        if (score < 25) {
+            finishLogin();
+        } else {
+            renderChallenge(score);
+            showStep(2);
+        }
+    }, 800);
+}
+
+function renderChallenge(score) {
+    const content = document.getElementById('challengeContent');
+    let mfaType = score > 70 ? 'BIOMETRIC' : (score > 40 ? 'OTP_PUSH' : 'KEYCARD');
+    let icon = mfaType === 'BIOMETRIC' ? 'finger-print' : (mfaType === 'OTP_PUSH' ? 'phone-portrait' : 'card');
+    let label = mfaType === 'BIOMETRIC' ? 'BIOMETRIC SCAN REQUIRED' : (mfaType === 'OTP_PUSH' ? 'MOBILE OTP REQUIRED' : 'SECURITY KEYCARD SCAN');
+
+    content.innerHTML = `
+        <div class="challenge-box">
+            <h3>${label}</h3>
+            <p style="font-size:0.65rem; color:var(--text-muted)">Risk Level: ${Math.round(score)}% - Escalation triggered.</p>
+            <div class="challenge-icon"><ion-icon name="${icon}"></ion-icon></div>
+            ${mfaType === 'OTP_PUSH' ? '<input type="text" class="mfa-input" placeholder="000000" maxlength="6">' : ''}
+            <button class="zt-btn btn-green" onclick="finishLogin()">VERIFY & PROCEED</button>
+        </div>
+    `;
+}
+
+function finishLogin() {
+    showStep('Success');
+    setTimeout(() => {
+        closeLogin();
+        executeActualSimulation(currentSimulationType);
+    }, 1500);
+}
+
+function executeActualSimulation(type) {
+    const analysis = calculateBaseRisk(type);
+    let label = type === 'trusted' ? 'KUKUH (CEO)' : (type === 'suspicious' ? 'VENDOR_X' : 'MALICIOUS_BOT');
+    let ip = type === 'trusted' ? '192.168.1.45' : (type === 'suspicious' ? '203.14.88.21' : '104.22.7.192');
+
+    addLog('ALLOW', ip, `Access granted to ${label}. Policy enforced.`);
+    updateDetails(type, analysis.factors);
+}
+
+function closeLogin() {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    document.getElementById('usernameInput').value = '';
+    document.getElementById('passwordInput').value = '';
+}
+
+// Global Override
+window.simulateAccess = function (type) {
+    openLogin(type);
+};
