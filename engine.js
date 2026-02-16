@@ -1,6 +1,6 @@
 /**
- * TRASHURE SOC ENGINE - v5.0 (STATIC GITHUB PAGES VERSION)
- * Ported by Antigravity - Real ZTNA logic in a standalone JS file.
+ * TRASHURE SOC ENGINE - v5.1 (STATIC GITHUB PAGES VERSION)
+ * Enhanced with Diagnostics & Force-Refresh
  */
 
 let currentDept = null;
@@ -29,10 +29,11 @@ const USERNAMES = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("🛠️ DOM Loaded. Initializing SOC...");
     initClock();
     initCharts();
-    initLocalStream(); // Replacing setupSocket for GitHub Pages
-    console.log("🚀 ZTNA SOC v5.0 (STATIC) READY.");
+    initLocalStream();
+    console.log("✅ ZTNA SOC v5.1 (STATIC) READY.");
 });
 
 function initClock() {
@@ -48,51 +49,52 @@ function getRiskLabel(score) {
     return "LOW RISK";
 }
 
-// 🛡️ Data Stream Simulation (Ported from server.js)
 function initLocalStream() {
-    console.log("📡 Starting Local ZTNA Stream (Standalone Mode)...");
+    console.log("📡 Starting Local ZTNA Stream...");
     const dot = document.querySelector('.status-dot');
-    if (dot) dot.style.background = '#22c55e'; // Green dot for local simulation
+    if (dot) dot.style.background = '#22c55e';
 
     setInterval(() => {
-        const user = USERNAMES[Math.floor(Math.random() * USERNAMES.length)];
+        try {
+            const user = USERNAMES[Math.floor(Math.random() * USERNAMES.length)];
+            const localSubnets = ["10.62.8", "10.62.30", "10.62.150"];
+            const anomalySubnets = ["172.16.10", "192.168.1", "103.11.24", "45.76.12"];
+            const isAnomaly = Math.random() < 0.3;
+            const subList = isAnomaly ? anomalySubnets : localSubnets;
+            const subnet = subList[Math.floor(Math.random() * subList.length)];
+            const ip = `${subnet}.${Math.floor(Math.random() * 254)}`;
+            const isLocal = ip.startsWith("10.62.");
 
-        // SUBNET DEFINITION (10.62.x.x is TRUSTED)
-        const localSubnets = ["10.62.8", "10.62.30", "10.62.150"];
-        const anomalySubnets = ["172.16.10", "192.168.1", "103.11.24", "45.76.12"];
+            let baseScore = isLocal ? (5 + Math.random() * 25) : (50 + Math.random() * 45);
+            if (user.dept === "HR") baseScore -= 5;
 
-        const isAnomaly = Math.random() < 0.3;
-        const subList = isAnomaly ? anomalySubnets : localSubnets;
-        const subnet = subList[Math.floor(Math.random() * subList.length)];
-        const ip = `${subnet}.${Math.floor(Math.random() * 254)}`;
-        const isLocal = ip.startsWith("10.62.");
+            const score = Math.max(0, Math.min(100, baseScore)).toFixed(1);
+            const riskLabel = getRiskLabel(score);
 
-        let baseScore = isLocal ? (5 + Math.random() * 25) : (50 + Math.random() * 45);
-        if (user.dept === "HR") baseScore -= 5;
+            const factors = {
+                geo: isLocal ? Math.max(2, Math.floor(Math.random() * 8)) : Math.max(45, Math.floor((score * 0.7) + Math.random() * 20)),
+                velocity: Math.max(4, Math.floor((score * 0.45) + Math.random() * 12)),
+                integrity: Math.min(100, Math.max(0, 100 - Math.floor((score * 0.75) + Math.random() * 8)))
+            };
 
-        const score = Math.max(0, Math.min(100, baseScore)).toFixed(1);
-        const riskLabel = getRiskLabel(score);
+            const data = {
+                user: user.name, role: user.role, dept: user.dept, ip: ip,
+                riskScore: score, riskLabel: riskLabel, factors: factors,
+                coords: { x: 20 + Math.random() * 60, y: 30 + Math.random() * 40 },
+                msg: isLocal ? `[TRUSTED_IDENTITY] Access via secure enterprise subnet 10.62.0.0.` : `[SUSPICIOUS_IP] External connection attempt from ${subnet}.0 subnet.`,
+                status: score > 70 ? 'DENIED' : (score > 35 ? 'MFA_REQUIRED' : 'VERIFIED'),
+                timestamp: new Date().toLocaleTimeString('id-ID')
+            };
 
-        const factors = {
-            geo: isLocal ? Math.max(2, Math.floor(Math.random() * 8)) : Math.max(45, Math.floor((score * 0.7) + Math.random() * 20)),
-            velocity: Math.max(4, Math.floor((score * 0.45) + Math.random() * 12)),
-            integrity: Math.min(100, Math.max(0, 100 - Math.floor((score * 0.75) + Math.random() * 8)))
-        };
-
-        const data = {
-            user: user.name, role: user.role, dept: user.dept, ip: ip,
-            riskScore: score, riskLabel: riskLabel, factors: factors,
-            coords: { x: 20 + Math.random() * 60, y: 30 + Math.random() * 40 },
-            msg: isLocal ? `[TRUSTED_IDENTITY] Access via secure enterprise subnet 10.62.0.0.` : `[SUSPICIOUS_IP] External connection attempt from ${subnet}.0 subnet.`,
-            status: score > 70 ? 'DENIED' : (score > 35 ? 'MFA_REQUIRED' : 'VERIFIED'),
-            timestamp: new Date().toLocaleTimeString('id-ID')
-        };
-
-        handleInboundData(data);
+            handleInboundData(data);
+        } catch (e) {
+            console.error("❌ Stream Loop Error:", e);
+        }
     }, 3000);
 }
 
 function handleInboundData(data) {
+    // console.log("📥 Data Pulse:", data.user, data.riskScore); // Noise reduction
     renderAuditLog(data);
     updateStats(data);
     const mon = document.getElementById('rawMonitor');
@@ -160,6 +162,31 @@ function updateStats(data) {
     }
 }
 
+function initCharts() {
+    const ctx = document.getElementById('trafficChart')?.getContext('2d');
+    if (!ctx) return;
+    trafficChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['-3h', '-2h', '-1h', 'Now'],
+            datasets: [{
+                label: 'Traffic Pulse',
+                data: [30, 45, 25, 60],
+                borderColor: '#38bdf8',
+                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { display: false }, x: { grid: { display: false }, ticks: { color: '#64748b' } } }
+        }
+    });
+}
+
 function renderMapPoint(coords) {
     const map = document.getElementById('worldMap');
     if (!map) return;
@@ -187,19 +214,15 @@ window.selectDept = function (name, ip) {
 
 window.tryAccess = function (action) {
     if (!currentDept) return alert("Pilih Unit Dulu Bang!");
-
-    // SIMULATED ENDPOINT LOGIC
     const user = USERNAMES.find(u => u.dept.toLowerCase().includes(currentDept.toLowerCase())) || USERNAMES[0];
     let score = (action === 'READ') ? 15 : 45;
     let msg = `[GPO_CHECK] User ${user.name} allowed ${action} access to Dept Folder.`;
     let status = (score > 35) ? 'PENDING_MFA' : 'VERIFIED';
-
     if (action === 'WRITE' && user.dept !== 'HR') {
         score = 82.5;
         msg = `[ZTNA_BLOCK] GPO Policy violation: ${user.name} (${user.dept}) has no WRITE permission.`;
         status = 'DENIED';
     }
-
     const data = {
         user: user.name, role: user.role, dept: user.dept,
         ip: `10.62.8.${Math.floor(Math.random() * 254)}`,
@@ -208,7 +231,6 @@ window.tryAccess = function (action) {
         msg: msg, status: status, coords: { x: 50, y: 50 },
         timestamp: new Date().toLocaleTimeString('id-ID')
     };
-
     handleInboundData(data);
     if (status === 'PENDING_MFA') {
         triggerPhoneAuth(`REQ: ${action} for ${data.user} [${data.riskLabel}]`);
